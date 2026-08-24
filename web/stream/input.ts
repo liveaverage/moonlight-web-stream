@@ -128,16 +128,13 @@ export class StreamInput {
             return
         }
 
-        console.debug("PASTE", data)
-
         const text = data.getData("text/plain")
         if (text) {
-            console.debug("PASTE TEXT", text)
-
             // Before sending text raise all keys
             this.raiseAllKeys()
 
-            this.sendText(text)
+            // Sending CRLF would create two line breaks on the host.
+            this.sendText(text.replace(/\r\n/g, "\n"))
         }
     }
 

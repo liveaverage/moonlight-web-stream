@@ -66,6 +66,30 @@ pub enum Command {
     /// Config related commands
     #[command(subcommand)]
     Config(ConfigCommand),
+    /// Runs the outbound clipboard companion beside Sunshine.
+    ClipboardAgent(ClipboardAgentArgs),
+    /// Generates a clipboard companion token and its server-side SHA-256 hash.
+    ClipboardToken,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct ClipboardAgentArgs {
+    /// WebSocket endpoint on the Moonlight Web bastion, including any path prefix.
+    #[arg(long, env = "CLIPBOARD_AGENT_SERVER")]
+    pub server: String,
+    /// Moonlight Web host ID represented by this Sunshine machine.
+    #[arg(long, env = "CLIPBOARD_AGENT_HOST_ID")]
+    pub host_id: u32,
+    /// Secret token whose SHA-256 hash is configured on the bastion.
+    #[arg(long, env = "CLIPBOARD_AGENT_TOKEN", hide_env_values = true)]
+    pub token: String,
+    /// Maximum clipboard text size accepted by the companion.
+    #[arg(
+        long,
+        env = "CLIPBOARD_AGENT_MAX_TEXT_BYTES",
+        default_value_t = 262_144
+    )]
+    pub max_text_bytes: usize,
 }
 
 #[derive(Subcommand)]

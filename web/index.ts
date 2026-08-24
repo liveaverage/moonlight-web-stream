@@ -126,6 +126,8 @@ class MainApp implements Component {
             window.location.reload()
         })
         this.logoutButton.classList.add("logout-button")
+        this.logoutButton.title = I.index.logout
+        this.logoutButton.setAttribute("aria-label", I.index.logout)
 
         this.loginButton.addEventListener("click", async () => {
             const success = await tryLogin()
@@ -134,11 +136,15 @@ class MainApp implements Component {
             }
         })
         this.loginButton.classList.add("login-button")
+        this.loginButton.title = I.index.login
+        this.loginButton.setAttribute("aria-label", I.index.login)
 
         this.adminButton.addEventListener("click", async () => {
             window.location.href = buildUrl("/admin.html")
         })
         this.adminButton.classList.add("admin-button")
+        this.adminButton.title = I.index.administration
+        this.adminButton.setAttribute("aria-label", I.index.administration)
 
         // Actions
         this.actionElement.classList.add("actions-list")
@@ -151,6 +157,8 @@ class MainApp implements Component {
 
         // Host add button
         this.hostAddButton.classList.add("host-add")
+        this.hostAddButton.title = I.index.addHost
+        this.hostAddButton.setAttribute("aria-label", I.index.addHost)
         this.hostAddButton.addEventListener("click", this.addHost.bind(this))
 
         // Host list
@@ -159,6 +167,8 @@ class MainApp implements Component {
 
         // Settings Button
         this.settingsButton.classList.add("open-settings")
+        this.settingsButton.title = I.index.openSettings
+        this.settingsButton.setAttribute("aria-label", I.index.openSettings)
         this.settingsButton.addEventListener("click", () => this.setCurrentDisplay("settings"))
 
         this.saveRoleDefaultsButton.innerText = I.settings.saveRoleDefaults

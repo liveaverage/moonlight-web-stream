@@ -1,6 +1,6 @@
 import { ControllerConfig } from "../stream/gamepad"
 import { MouseMode, MouseScrollMode, TouchMode } from "../stream/input"
-import { PageStyle } from "../styles/index"
+import { getThemeOptions, normalizeThemeId, PageStyle } from "../styles/themes"
 import { getLanguageOptions, getTranslations, Language, normalizeLanguage } from "../i18n"
 import { Component, ComponentEvent } from "./index"
 import { InputComponent, SelectComponent } from "./input"
@@ -33,6 +33,7 @@ export type Settings = {
     language: Language
     enterFullscreenOnStreamStart: boolean
     toggleFullscreenWithKeybind: boolean
+    clipboardShortcuts: boolean
     pageStyle: PageStyle
     hdr: boolean
     useSelectElementPolyfill: boolean
@@ -97,9 +98,7 @@ export function getLocalStreamSettings(defaultSettings: Settings) {
     }
 
     // Migration
-    if (settings?.pageStyle === "old") {
-        settings.pageStyle = "moonlight"
-    }
+    settings.pageStyle = normalizeThemeId(settings?.pageStyle)
 
     return settings
 }
@@ -185,6 +184,7 @@ export class StreamSettingsComponent implements Component {
     private language: SelectComponent
     private enterFullscreenOnStreamStart: InputComponent
     private toggleFullscreenWithKeybind: InputComponent
+    private clipboardShortcuts: InputComponent
 
     private pageStyle: SelectComponent
 
@@ -518,11 +518,14 @@ export class StreamSettingsComponent implements Component {
         this.toggleFullscreenWithKeybind.addChangeListener(this.onSettingsChange.bind(this))
         this.toggleFullscreenWithKeybind.mount(this.divElement)
 
+        this.clipboardShortcuts = new InputComponent("clipboardShortcuts", "checkbox", i.clipboardShortcuts, {
+            checked: settings?.clipboardShortcuts ?? defaultSettings_.clipboardShortcuts
+        })
+        this.clipboardShortcuts.addChangeListener(this.onSettingsChange.bind(this))
+        this.clipboardShortcuts.mount(this.divElement)
+
         // Page Style
-        this.pageStyle = new SelectComponent("pageStyle", [
-            { value: "standard", name: "Standard" },
-            { value: "moonlight", name: "Moonlight" },
-        ], {
+        this.pageStyle = new SelectComponent("pageStyle", getThemeOptions(), {
             displayName: i.style,
             preSelectedOption: settings?.pageStyle ?? defaultSettings_.pageStyle
         })
@@ -597,6 +600,7 @@ export class StreamSettingsComponent implements Component {
 
         settings.enterFullscreenOnStreamStart = this.enterFullscreenOnStreamStart.isChecked()
         settings.toggleFullscreenWithKeybind = this.toggleFullscreenWithKeybind.isChecked()
+        settings.clipboardShortcuts = this.clipboardShortcuts.isChecked()
 
         settings.pageStyle = this.pageStyle.getValue() as any
 

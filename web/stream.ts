@@ -6,7 +6,7 @@ import { showNotification } from "./component/notification"
 import { getModalBackground, Modal, showMessage, showModal } from "./component/modal/index"
 import { getSidebarRoot, setSidebar, setSidebarExtended, setSidebarStyle, Sidebar } from "./component/sidebar/index"
 import { defaultStreamInputConfig, MouseMode, ScreenKeyboardSetVisibleEvent, StreamInputConfig } from "./stream/input"
-import { getLocalStreamSettings, Settings, TransportType } from "./component/settings_menu"
+import { getLocalStreamSettings, setLocalStreamSettings, Settings, TransportType } from "./component/settings_menu"
 import { SelectComponent } from "./component/input"
 import { emptyKeyModifiers } from "./stream/keyboard"
 import { LogLevel, setLogger as uniffiSetLogger, Logger as UniffiLogger, uniffiInitAsync } from "./uniffi/entry"
@@ -18,6 +18,7 @@ import { adoptRoleDefaultLanguage, getCurrentLanguage, getTranslations, Language
 import { requestKeyboardLock } from "./iframe"
 import { InfoEvent, Stream, StreamCapabilities } from "./stream/index"
 import { LogMessageType } from "./stream/log"
+import { ClipboardComponent } from "./component/clipboard"
 
 let I = getTranslations(getCurrentLanguage())
 
@@ -176,6 +177,10 @@ class ViewerApp implements Component {
     private manualFullscreenExitRequested: boolean = false
 
     private toggleFullscreenWithKeybind: boolean = false
+    private clipboardShortcutsEnabled: boolean = false
+    private pendingClipboardCopy: boolean = false
+    private pendingClipboardPaste: boolean = false
+    private settings: Settings
 
     private hasShownFullscreenEscapeWarning = false
 
@@ -191,6 +196,7 @@ class ViewerApp implements Component {
                 ...options?.videoSizeCustom,
             },
         }
+        this.settings = settings
         Object.assign(this.inputConfig, {
             mouseMode: settings.mouseMode,
             mouseScrollMode: settings.mouseScrollMode,
@@ -199,8 +205,10 @@ class ViewerApp implements Component {
             controllerConfig: settings.controllerConfig
         })
 
+        this.clipboardShortcutsEnabled = settings.clipboardShortcuts
+
         // Configure sidebar
-        this.sidebar = new ViewerSidebar(this)
+        this.sidebar = new ViewerSidebar(this, api, hostId, settings.clipboardShortcuts)
         setSidebar(this.sidebar)
 
         // Configure stats element
@@ -241,6 +249,8 @@ class ViewerApp implements Component {
         this.addListeners(document.getElementById("input") as HTMLDivElement)
 
         window.addEventListener("blur", () => {
+            this.pendingClipboardCopy = false
+            this.pendingClipboardPaste = false
             this.stream.getInput().raiseAllKeys()
         })
         document.addEventListener("visibilitychange", () => {
@@ -405,11 +415,50 @@ class ViewerApp implements Component {
     }
 
     // Keyboard
+    private isClipboardShortcut(event: KeyboardEvent, code: "KeyC" | "KeyV"): boolean {
+        return this.clipboardShortcutsEnabled
+            && (event.ctrlKey || event.metaKey)
+            && !event.altKey
+            && !event.shiftKey
+            && event.code === code
+    }
+
+    sendRemoteControlShortcut(key: number) {
+        const input = this.stream.getInput()
+        const ctrlModifiers = { ...emptyKeyModifiers(), ctrl: true }
+
+        input.raiseAllKeys()
+        input.sendKey(true, StreamKeys.VK_LCONTROL, emptyKeyModifiers())
+        input.sendKey(true, key, ctrlModifiers)
+        input.sendKey(false, key, ctrlModifiers)
+        input.sendKey(false, StreamKeys.VK_LCONTROL, emptyKeyModifiers())
+    }
+
+    setClipboardShortcutsEnabled(enabled: boolean) {
+        this.clipboardShortcutsEnabled = enabled
+        if (!enabled) {
+            this.pendingClipboardCopy = false
+            this.pendingClipboardPaste = false
+        }
+        this.settings.clipboardShortcuts = enabled
+        setLocalStreamSettings(this.settings)
+    }
+
     onKeyDown(event: KeyboardEvent) {
         this.onUserInteraction()
 
         console.debug(event)
-        if (event.shiftKey && event.ctrlKey && event.code == "KeyV") {
+        if (this.isClipboardShortcut(event, "KeyV")) {
+            // Leave the browser default intact so the paste event carries the
+            // clipboard payload. Do not forward the raw shortcut to the host.
+            this.pendingClipboardPaste = true
+        } else if (this.isClipboardShortcut(event, "KeyC")) {
+            event.preventDefault()
+            if (!event.repeat) {
+                this.sendRemoteControlShortcut(StreamKeys.VK_KEY_C)
+                this.pendingClipboardCopy = true
+            }
+        } else if (event.shiftKey && event.ctrlKey && event.code == "KeyV") {
             // We are likely pasting -> don't send keys
         } else if (event.code == "F11") {
             // Allow manual fullscreen
@@ -424,6 +473,24 @@ class ViewerApp implements Component {
     private isTogglingFullscreenWithKeybind: "waitForCtrl" | "makingFullscreen" | "none" = "none"
     onKeyUp(event: KeyboardEvent) {
         this.onUserInteraction()
+
+        if (event.code === "KeyV" && this.pendingClipboardPaste) {
+            this.pendingClipboardPaste = false
+            event.preventDefault()
+            event.stopPropagation()
+            return
+        }
+        if (event.code === "KeyC" && this.pendingClipboardCopy) {
+            event.preventDefault()
+            event.stopPropagation()
+            this.pendingClipboardCopy = false
+            if (this.sidebar.getClipboard().isCopyOutAvailable()) {
+                window.setTimeout(() => {
+                    void this.sidebar.getClipboard().copyFromDesktop()
+                }, 350)
+            }
+            return
+        }
 
         event.preventDefault()
         this.stream.getInput().onKeyUp(event)
@@ -454,6 +521,7 @@ class ViewerApp implements Component {
 
         this.stream.getInput().onPaste(event)
 
+        event.preventDefault()
         event.stopPropagation()
     }
 
@@ -1021,9 +1089,18 @@ class ViewerSidebar implements Component, Sidebar {
 
     private mouseMode: SelectComponent
     private touchMode: SelectComponent
+    private clipboard: ClipboardComponent
 
-    constructor(app: ViewerApp) {
+    constructor(app: ViewerApp, api: Api, hostId: number, clipboardShortcuts: boolean) {
         this.app = app
+
+        this.clipboard = new ClipboardComponent(api, hostId, {
+            shortcutsEnabled: clipboardShortcuts,
+            pasteText: text => this.app.getStream()?.getInput().sendText(text),
+            pasteRemoteClipboard: () => this.app.sendRemoteControlShortcut(StreamKeys.VK_KEY_V),
+            copyRemoteSelection: () => this.app.sendRemoteControlShortcut(StreamKeys.VK_KEY_C),
+            shortcutsChanged: enabled => this.app.setClipboardShortcutsEnabled(enabled),
+        })
 
         // Configure divs
         this.div.classList.add("sidebar-stream")
@@ -1145,6 +1222,8 @@ class ViewerSidebar implements Component, Sidebar {
         })
         this.touchMode.addChangeListener(this.onTouchModeChange.bind(this))
         this.touchMode.mount(this.div)
+
+        this.clipboard.mount(this.div)
     }
 
     onCapabilitiesChange(capabilities: StreamCapabilities) {
@@ -1153,6 +1232,10 @@ class ViewerSidebar implements Component, Sidebar {
 
     getScreenKeyboard(): ScreenKeyboard {
         return this.screenKeyboard
+    }
+
+    getClipboard(): ClipboardComponent {
+        return this.clipboard
     }
 
     // -- Keyboard

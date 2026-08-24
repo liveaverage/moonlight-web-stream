@@ -41,6 +41,7 @@ use crate::{
 
 mod api;
 mod app;
+mod clipboard_agent;
 mod web;
 
 mod cli;
@@ -87,6 +88,28 @@ async fn main() {
                 .expect("failed to write default file");
 
             println!("Successfully generate config at {config_path:?}");
+            return;
+        }
+        Some(Command::ClipboardToken) => {
+            use sha2::{Digest, Sha256};
+
+            let token = format!("{}{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
+            println!("token={token}");
+            println!(
+                "token_sha256={}",
+                hex::encode(Sha256::digest(token.as_bytes()))
+            );
+            return;
+        }
+        Some(Command::ClipboardAgent(options)) => {
+            let guard = init_log(&config);
+            rustls::crypto::ring::default_provider()
+                .install_default()
+                .expect("failed to set ring crypto provider as default");
+            if let Err(error) = clipboard_agent::run(options).await {
+                error!("{error:?}");
+            }
+            drop(guard);
             return;
         }
         None | Some(Command::Run) => {

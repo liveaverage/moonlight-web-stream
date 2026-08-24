@@ -241,6 +241,7 @@ export class SelectComponent extends ElementWithLabel {
 
     constructor(internalName: string, options: Array<{ value: string, name: string }>, init?: SelectInit) {
         super(internalName, init?.displayName)
+        this.div.classList.add("input-div")
 
         if (init && init.preSelectedOption) {
             this.preSelectedOption = init.preSelectedOption
@@ -254,8 +255,6 @@ export class SelectComponent extends ElementWithLabel {
             wrapper.classList.add("select-polyfill-wrapper")
 
             this.div.appendChild(wrapper)
-            this.div.classList.add("input-div")
-
             const display = document.createElement("p")
             display.classList.add("select-polyfill-display")
 

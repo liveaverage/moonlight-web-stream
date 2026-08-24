@@ -8,6 +8,7 @@ use actix_web::{
 use crate::api::{
     app::{get_app_image, get_apps},
     auth::auth_middleware,
+    clipboard::{clipboard_agent, get_clipboard, get_clipboard_status, put_clipboard},
     host::{
         cancel_host, delete_host, get_host, list_hosts, pair_host, patch_host, post_host, wake_host,
     },
@@ -33,6 +34,7 @@ pub(super) mod bindings_ext;
 
 pub mod app;
 pub mod auth;
+pub mod clipboard;
 pub mod host;
 pub mod role;
 pub mod settings;
@@ -92,6 +94,13 @@ pub fn api_service() -> impl HttpServiceFactory {
             // -- Settings
             get_default_settings,
             get_permissions
+        ])
+        .service(services![
+            // -- Optional local desktop clipboard bridge
+            get_clipboard,
+            get_clipboard_status,
+            put_clipboard,
+            clipboard_agent,
         ])
         .service(services![
             // -- Web Socket Stream

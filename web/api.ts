@@ -86,6 +86,29 @@ export type Api = {
     role: DetailedRole | null,
 }
 
+export type ClipboardText = {
+    text: string,
+}
+
+export type ClipboardStatus = {
+    configured: boolean,
+}
+
+export async function apiGetClipboardStatus(api: Api, hostId: number): Promise<ClipboardStatus> {
+    return fetchApi(api, "/clipboard/status", "GET", { query: { host_id: hostId } })
+}
+
+export async function apiGetClipboard(api: Api, hostId: number): Promise<ClipboardText> {
+    return fetchApi(api, "/clipboard", "GET", { query: { host_id: hostId } })
+}
+
+export async function apiPutClipboard(api: Api, hostId: number, text: string): Promise<void> {
+    await fetchApi(api, "/clipboard", "PUT", {
+        json: { host_id: hostId, text },
+        response: "ignore",
+    })
+}
+
 export type ApiFetchInit = {
     noUrlModify?: boolean,
     query?: any,

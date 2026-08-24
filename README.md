@@ -15,6 +15,8 @@ It hosts a Web Server which will forward [Sunshine](https://docs.lizardbyte.dev/
   - [Manual Installation](#install-manually)
   - [Docker Installation](docker/README.md)
 - [Setup](#setup)
+  - [Clipboard](#clipboard)
+  - [Themes](#themes)
   - [Streaming over the Internet](#streaming-over-the-internet)
   - [Configuring https](#configuring-https)
   - [Proxying via Apache 2](#proxying-via-apache-2)
@@ -59,6 +61,18 @@ You can install it [manually](#install-manually) or with [docker](docker/README.
 2. Pair your pc by clicking on the host (<img src="web/resources/desktop_windows-48px.svg" alt="icon" style="height:1em; vertical-align:middle;">). Then enter the code in sunshine
 
 3. Launch an app
+
+### Clipboard
+
+The stream sidebar provides text paste into the remote desktop, copy out through an optional Windows/Linux host companion, and an opt-in Ctrl/Cmd+C/V redirect. Paste-in requires no Sunshine changes; copy-out works when Moonlight Web runs on a separate bastion because the companion connects outbound from the Sunshine host.
+
+See [Clipboard setup and usage](docs/CLIPBOARD.md).
+
+### Themes
+
+Choose Standard, Moonlight, or the built-in NVIDIA theme in **Settings → Style**. A custom CSS theme can be added with one `web_server.custom_theme` config entry.
+
+See [Creating and referencing a theme](docs/THEMES.md).
 
 ### Streaming over the Internet
 

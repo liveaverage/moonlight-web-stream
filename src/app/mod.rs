@@ -38,6 +38,7 @@ use crate::app::{
 };
 
 pub mod auth;
+pub mod clipboard;
 pub mod host;
 pub mod password;
 pub mod role;
@@ -199,6 +200,7 @@ struct AppInner {
     storage: Arc<dyn Storage + Send + Sync>,
     app_image_cache: RwLock<HashMap<(UserId, HostId, AppId), Bytes>>,
     streams: RwLock<HashMap<StreamId, Stream>>,
+    clipboard_agents: clipboard::ClipboardAgents,
 }
 
 pub type RequestClient = TokioHyperClient;
@@ -214,6 +216,7 @@ impl App {
             config,
             app_image_cache: Default::default(),
             streams: Default::default(),
+            clipboard_agents: Default::default(),
         };
         let inner = Arc::new(app);
 

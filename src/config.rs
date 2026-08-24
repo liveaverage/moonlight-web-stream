@@ -224,6 +224,50 @@ pub struct WebServerConfig {
     pub first_login_create_admin: bool,
     pub first_login_assign_global_hosts: bool,
     pub forwarded_header: Option<ForwardedHeaders>,
+    #[serde(default)]
+    pub clipboard_bridge: ClipboardBridgeConfig,
+    pub custom_theme: Option<CustomThemeConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClipboardBridgeConfig {
+    #[serde(default)]
+    pub agents: Vec<ClipboardAgentConfig>,
+    #[serde(default = "default_clipboard_max_text_bytes")]
+    pub max_text_bytes: usize,
+    #[serde(default = "default_clipboard_request_timeout")]
+    pub request_timeout: Duration,
+}
+
+impl Default for ClipboardBridgeConfig {
+    fn default() -> Self {
+        Self {
+            agents: Vec::new(),
+            max_text_bytes: default_clipboard_max_text_bytes(),
+            request_timeout: default_clipboard_request_timeout(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClipboardAgentConfig {
+    pub host_id: u32,
+    pub token_sha256: String,
+}
+
+fn default_clipboard_max_text_bytes() -> usize {
+    256 * 1024
+}
+
+fn default_clipboard_request_timeout() -> Duration {
+    Duration::from_secs(5)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomThemeConfig {
+    pub id: String,
+    pub label: String,
+    pub stylesheet: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -243,6 +287,8 @@ impl Default for WebServerConfig {
             first_login_create_admin: true,
             first_login_assign_global_hosts: true,
             forwarded_header: None,
+            clipboard_bridge: ClipboardBridgeConfig::default(),
+            custom_theme: None,
         }
     }
 }
@@ -311,4 +357,49 @@ fn default_moonlight_http_port() -> u16 {
 
 fn default_pair_device_name() -> String {
     "roth".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Config;
+
+    #[test]
+    fn clipboard_bridge_is_disabled_by_default() {
+        let config = Config::default();
+
+        assert!(config.web_server.clipboard_bridge.agents.is_empty());
+        assert_eq!(
+            config.web_server.clipboard_bridge.max_text_bytes,
+            256 * 1024
+        );
+        assert!(config.web_server.custom_theme.is_none());
+    }
+
+    #[test]
+    fn clipboard_and_theme_config_round_trip() {
+        let mut value =
+            serde_json::to_value(Config::default()).expect("the default config should serialize");
+        value["web_server"]["clipboard_bridge"]["agents"] = serde_json::json!([{
+            "host_id": 123,
+            "token_sha256": "0123456789abcdef"
+        }]);
+        value["web_server"]["custom_theme"] = serde_json::json!({
+            "id": "example",
+            "label": "Example",
+            "stylesheet": "themes/example.css"
+        });
+
+        let config: Config =
+            serde_json::from_value(value).expect("clipboard and theme config should deserialize");
+
+        assert_eq!(config.web_server.clipboard_bridge.agents[0].host_id, 123);
+        assert_eq!(
+            config
+                .web_server
+                .custom_theme
+                .expect("custom theme should be present")
+                .stylesheet,
+            "themes/example.css"
+        );
+    }
 }

@@ -140,12 +140,16 @@ class AdminApp implements Component {
             window.location.reload()
         })
         this.logoutButton.classList.add("logout-button")
+        this.logoutButton.title = I.index.logout
+        this.logoutButton.setAttribute("aria-label", I.index.logout)
         this.topLineActions.appendChild(this.logoutButton)
 
         this.userButton.addEventListener("click", async () => {
             window.location.href = buildUrl("/")
         })
         this.userButton.classList.add("user-button")
+        this.userButton.title = I.index.userView
+        this.userButton.setAttribute("aria-label", I.index.userView)
         this.topLineActions.appendChild(this.userButton)
 
         this.root.appendChild(this.topLine)

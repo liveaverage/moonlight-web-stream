@@ -1,0 +1,140 @@
+/*
+ * Moonlight Web theme contract.
+ * Custom themes override these variables; the selectors below apply them to
+ * the existing UI without requiring component-specific CSS.
+ */
+:root {
+    color-scheme: dark;
+    --ml-theme-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ml-theme-canvas: #000f1f;
+    --ml-theme-canvas-alt: #001a2e;
+    --ml-theme-surface: rgba(0, 30, 50, 0.96);
+    --ml-theme-surface-alt: rgba(0, 15, 30, 0.96);
+    --ml-theme-text: #ffffff;
+    --ml-theme-text-muted: #a8e6ff;
+    --ml-theme-accent: #00d4ff;
+    --ml-theme-accent-strong: #00ffff;
+    --ml-theme-on-accent: #001018;
+    --ml-theme-border: rgba(0, 212, 255, 0.45);
+    --ml-theme-danger: #ff8c42;
+    --ml-theme-focus: #00ffff;
+    --ml-theme-radius-sm: 6px;
+    --ml-theme-radius-md: 12px;
+    --ml-theme-radius-lg: 16px;
+    --ml-theme-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+body {
+    color: var(--ml-theme-text);
+    font-family: var(--ml-theme-font);
+}
+
+body::before {
+    background: linear-gradient(135deg, var(--ml-theme-canvas), var(--ml-theme-canvas-alt));
+}
+
+a,
+label,
+input,
+select,
+textarea,
+button,
+.textlike,
+.select-polyfill-display {
+    color: var(--ml-theme-text);
+}
+
+button,
+.file-button {
+    color: var(--ml-theme-on-accent);
+    background: var(--ml-theme-accent);
+    border: 1px solid var(--ml-theme-border);
+    border-radius: var(--ml-theme-radius-sm);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+button:hover:not(:disabled),
+.file-button:hover:not(:disabled) {
+    color: var(--ml-theme-on-accent);
+    background: var(--ml-theme-accent-strong);
+    border-color: var(--ml-theme-accent-strong);
+    box-shadow: 0 0 0 1px var(--ml-theme-accent-strong);
+    transform: translateY(-1px);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.host-element:focus-visible {
+    outline: 2px solid var(--ml-theme-focus);
+    outline-offset: 2px;
+}
+
+textarea,
+select,
+.select-polyfill-display,
+input[type="text"],
+input[type="password"],
+input[type="number"] {
+    color: var(--ml-theme-text);
+    background: color-mix(in srgb, var(--ml-theme-surface) 88%, black);
+    border: 1px solid var(--ml-theme-border);
+    border-radius: var(--ml-theme-radius-sm);
+}
+
+input[type="checkbox"] {
+    border-color: var(--ml-theme-border);
+    background: var(--ml-theme-surface-alt);
+    box-shadow: none;
+}
+
+input[type="checkbox"]:checked {
+    background: var(--ml-theme-accent);
+    border-color: var(--ml-theme-accent);
+    box-shadow: none;
+}
+
+input[type="range"] {
+    accent-color: var(--ml-theme-accent);
+}
+
+.modal-content,
+.context-menu-background,
+.sidebar-content,
+.toast {
+    color: var(--ml-theme-text-muted);
+    background: linear-gradient(135deg, var(--ml-theme-surface), var(--ml-theme-surface-alt));
+    border: 1px solid var(--ml-theme-border);
+    border-radius: var(--ml-theme-radius-md);
+    box-shadow: var(--ml-theme-shadow);
+}
+
+.host-element {
+    background: var(--ml-theme-surface);
+    border-color: var(--ml-theme-border);
+    box-shadow: var(--ml-theme-shadow);
+}
+
+.host-element:hover {
+    background: var(--ml-theme-surface-alt);
+    border-color: var(--ml-theme-accent);
+    box-shadow: var(--ml-theme-shadow);
+}
+
+.app-active .app-image {
+    border-color: var(--ml-theme-accent);
+    box-shadow: 0 0 0 2px var(--ml-theme-accent);
+}
+
+.video-stats,
+.host-loading-text,
+.stream-keyboard-floating-button {
+    color: var(--ml-theme-text-muted);
+}
+
+.stream-keyboard-floating-button {
+    border-color: var(--ml-theme-border);
+    background: var(--ml-theme-surface);
+}

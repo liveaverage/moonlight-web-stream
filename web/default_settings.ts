@@ -43,7 +43,8 @@ const trueDefaultSettings: Settings =
     "language": "en",
     "enterFullscreenOnStreamStart": false,
     "toggleFullscreenWithKeybind": false,
-    // possible values: "standard", "old"
+    "clipboardShortcuts": false,
+    // built-in values: "standard", "moonlight", "nvidia"; custom theme ids are also accepted
     "pageStyle": "standard",
     "hdr": false,
     "useSelectElementPolyfill": false

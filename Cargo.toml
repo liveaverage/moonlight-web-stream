@@ -51,6 +51,10 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.142"
 pem = { version = "3.0.5", features = ["serde"] }
 
+# Optional outbound desktop clipboard companion
+arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-native-roots"] }
+
 # Error
 anyhow = "1.0.99"
 thiserror = "2.0.16"
@@ -60,7 +64,7 @@ sha2 = "0.10.9"
 pbkdf2 = { version = "0.13.0", features = ["sha2"] }
 
 # Other
-uuid = { version = "1.24.0" }
+uuid = { version = "1.24.0", features = ["serde"] }
 hex = { version = "0.4.3" }
 
 [target.'cfg(windows)'.dependencies]
