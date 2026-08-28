@@ -225,6 +225,25 @@ button.nv-button.nv-button--kind-primary.nv-button--color-brand:hover:not(:disab
 
 button.sidebar-button {
     margin: 0;
+    color: var(--text-color-base, #f7f7f7);
+    background: var(--background-color-surface-raised, #202020) !important;
+    border: 1px solid var(--border-color-brand, #76b900) !important;
+    border-radius: var(--radius-md, 4px);
+    box-shadow:
+        0 8px 22px rgba(0, 0, 0, 0.72),
+        0 0 0 1px rgba(0, 0, 0, 0.5),
+        var(--nvidia-glow-soft);
+}
+
+button.sidebar-button:hover:not(:disabled),
+button.sidebar-button:focus-visible {
+    color: var(--text-color-brand, #8ccf16);
+    background: var(--background-color-surface-overlay, #292929) !important;
+    border-color: var(--border-color-brand, #76b900) !important;
+    box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.78),
+        0 0 0 1px rgba(118, 185, 0, 0.48),
+        var(--nvidia-glow-strong);
 }
 
 .logout-button::before,
