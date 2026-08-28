@@ -29,6 +29,7 @@
 .stream-clipboard-editor {
     box-sizing: border-box;
     width: 100%;
+    max-width: none;
     min-height: 84px;
     margin: 0;
     padding: 8px;
