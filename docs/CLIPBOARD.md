@@ -11,10 +11,12 @@ The full Moonlight client's `Ctrl+Alt+Shift+V` shortcut is a different implement
 
 Open the sidebar while streaming:
 
-- **Paste to desktop** sends text typed into the panel.
-- **Use browser clipboard** reads the browser clipboard and pastes it.
-- **Copy from desktop** copies the current remote selection, retrieves the host clipboard, and writes it to the browser clipboard.
-- **Redirect Ctrl/Cmd+C and V** captures familiar shortcuts anywhere in the stream page, including while the settings tray has focus. The choice is saved locally.
+- Paste or type in the text box, then choose **Send text to desktop**. Editing the text box never sends text automatically.
+- **Paste browser clipboard now** reads the browser clipboard and sends it immediately.
+- **Copy selected text from desktop** copies the current remote selection, retrieves the host clipboard, and writes it to the browser clipboard.
+- **Use Ctrl/Cmd+C and V for clipboard transfer** captures familiar shortcuts over the streamed desktop. The shortcuts continue to edit the clipboard text box normally, and the choice is saved locally.
+
+When shortcut transfer is off, Ctrl/Cmd+C and V are sent directly to the remote desktop like other keyboard input.
 
 Browser clipboard access normally requires HTTPS or localhost, a focused tab, and browser permission. Shortcut capture begins clipboard access directly from the trusted key gesture. If browser copy is denied, Moonlight Web selects the retrieved text in the panel so it can still be copied manually; paste remains available through the panel editor.
 

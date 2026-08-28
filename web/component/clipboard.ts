@@ -34,20 +34,34 @@ export class ClipboardComponent implements Component {
         heading.innerText = this.i.clipboard
         this.root.appendChild(heading)
 
+        const help = document.createElement("p")
+        help.id = "stream-clipboard-help"
+        help.classList.add("stream-clipboard-help")
+        help.innerText = this.i.clipboardManualHelp
+        this.root.appendChild(help)
+
         this.editor.classList.add("stream-clipboard-editor")
         this.editor.placeholder = this.i.clipboardPlaceholder
         this.editor.ariaLabel = this.i.clipboardPlaceholder
+        this.editor.setAttribute("aria-describedby", help.id)
         this.editor.rows = 4
         this.editor.spellcheck = false
         this.editor.autocomplete = "off"
+        // The editor is a staging area. Do not let its native editing events
+        // bubble into the stream's global keyboard or paste handlers.
+        for (const eventName of ["keydown", "keyup", "keypress", "paste", "copy", "cut"]) {
+            this.editor.addEventListener(eventName, event => event.stopPropagation())
+        }
         this.root.appendChild(this.editor)
 
         const actions = document.createElement("div")
         actions.classList.add("stream-clipboard-actions")
 
-        actions.appendChild(this.makeButton(this.i.pasteToDesktop, () => {
+        const sendButton = this.makeButton(this.i.pasteToDesktop, () => {
             void this.pasteToDesktop(this.editor.value)
-        }))
+        })
+        sendButton.dataset.variant = "save-button"
+        actions.appendChild(sendButton)
         actions.appendChild(this.makeButton(this.i.pasteBrowserClipboard, () => {
             void this.pasteBrowserClipboard()
         }))
@@ -70,6 +84,11 @@ export class ClipboardComponent implements Component {
         shortcutLabel.appendChild(this.shortcutCheckbox)
         shortcutLabel.append(document.createTextNode(this.i.clipboardShortcuts))
         this.root.appendChild(shortcutLabel)
+
+        const shortcutHelp = document.createElement("p")
+        shortcutHelp.classList.add("stream-clipboard-shortcut-help")
+        shortcutHelp.innerText = this.i.clipboardShortcutHelp
+        this.root.appendChild(shortcutHelp)
 
         void this.loadCopyOutAvailability()
     }

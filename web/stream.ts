@@ -443,6 +443,14 @@ class ViewerApp implements Component {
     }
 
     private onClipboardShortcutKeyDown(event: KeyboardEvent) {
+        // Clipboard editor shortcuts must edit the staging text, never trigger
+        // a desktop transfer. The sidebar stops the remaining key event before
+        // it reaches the stream input handler.
+        const target = event.target
+        if (target instanceof Element && target.closest(".stream-clipboard-editor")) {
+            return
+        }
+
         const isCopy = this.isClipboardShortcut(event, "KeyC")
         const isPaste = this.isClipboardShortcut(event, "KeyV")
         if (!isCopy && !isPaste) {
