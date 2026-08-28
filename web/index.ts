@@ -339,12 +339,10 @@ class MainApp implements Component {
         // Unmount the current display
         if (this.currentDisplay == "hosts") {
             this.actionElement.removeChild(this.hostAddButton)
-            this.actionElement.removeChild(this.settingsButton)
 
             this.hostList.unmount(this.divElement)
         } else if (this.currentDisplay == "games") {
             this.actionElement.removeChild(this.backButton)
-            this.actionElement.removeChild(this.settingsButton)
 
             this.gameList?.unmount(this.divElement)
         } else if (this.currentDisplay == "settings") {
@@ -359,14 +357,12 @@ class MainApp implements Component {
         // Mount the new display
         if (display == "hosts") {
             this.actionElement.appendChild(this.hostAddButton)
-            this.actionElement.appendChild(this.settingsButton)
 
             this.hostList.mount(this.divElement)
 
             setAppState({ display: "hosts" }, pushIntoHistory)
         } else if (display == "games" && extraInfo?.hostId != null) {
             this.actionElement.appendChild(this.backButton)
-            this.actionElement.appendChild(this.settingsButton)
 
             if (this.gameList?.getHostId() != extraInfo?.hostId) {
                 this.gameList = new GameList(this.api, extraInfo?.hostId, extraInfo?.hostCache ?? null)
@@ -426,12 +422,16 @@ class MainApp implements Component {
         if (this.topLineActions.contains(this.adminButton)) {
             this.topLineActions.removeChild(this.adminButton)
         }
+        if (this.topLineActions.contains(this.settingsButton)) {
+            this.topLineActions.removeChild(this.settingsButton)
+        }
 
         if (this.user.is_default_user) {
             this.topLineActions.appendChild(this.loginButton)
         } else {
             this.topLineActions.appendChild(this.logoutButton)
         }
+        this.topLineActions.appendChild(this.settingsButton)
 
         if (this.user.role == "Admin") {
             this.topLineActions.appendChild(this.adminButton)

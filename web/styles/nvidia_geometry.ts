@@ -65,6 +65,11 @@ const backgroundVisibility = (x: number, width: number) =>
     smoothstep(clamp(x / width, 0, 1) / 0.46)
 
 function decorateKaizenElement(element: Element, decorated: Set<Element>) {
+    // This control owns its display state: it is only visible while the
+    // on-screen keyboard is active. Kaizen's generic button display rule would
+    // otherwise expose it as a non-functional overlay during normal streaming.
+    if (element.matches(".stream-keyboard-floating-button")) return
+
     const add = (...classes: string[]) => {
         element.classList.add(...classes)
         decorated.add(element)

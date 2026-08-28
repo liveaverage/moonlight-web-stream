@@ -14,9 +14,9 @@ Open the sidebar while streaming:
 - **Paste to desktop** sends text typed into the panel.
 - **Use browser clipboard** reads the browser clipboard and pastes it.
 - **Copy from desktop** copies the current remote selection, retrieves the host clipboard, and writes it to the browser clipboard.
-- **Redirect Ctrl/Cmd+C and V** enables familiar shortcuts for the current browser. The choice is saved locally.
+- **Redirect Ctrl/Cmd+C and V** captures familiar shortcuts anywhere in the stream page, including while the settings tray has focus. The choice is saved locally.
 
-Browser clipboard access normally requires HTTPS or localhost. If browser copy is denied, Moonlight Web selects the retrieved text in the panel so it can still be copied manually.
+Browser clipboard access normally requires HTTPS or localhost, a focused tab, and browser permission. Shortcut capture begins clipboard access directly from the trusted key gesture. If browser copy is denied, Moonlight Web selects the retrieved text in the panel so it can still be copied manually; paste remains available through the panel editor.
 
 ## Enable copy-out
 

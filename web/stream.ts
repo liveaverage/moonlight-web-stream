@@ -178,8 +178,6 @@ class ViewerApp implements Component {
 
     private toggleFullscreenWithKeybind: boolean = false
     private clipboardShortcutsEnabled: boolean = false
-    private pendingClipboardCopy: boolean = false
-    private pendingClipboardPaste: boolean = false
     private settings: Settings
 
     private hasShownFullscreenEscapeWarning = false
@@ -245,12 +243,16 @@ class ViewerApp implements Component {
         this.startStream(settings)
 
         // Configure input
+        // Clipboard shortcuts use capture so the stream sidebar and modal
+        // cannot swallow the opt-in shortcut before it reaches the viewer.
+        document.addEventListener("keydown", this.onClipboardShortcutKeyDown.bind(this), {
+            capture: true,
+            passive: false,
+        })
         this.addListeners(document)
         this.addListeners(document.getElementById("input") as HTMLDivElement)
 
         window.addEventListener("blur", () => {
-            this.pendingClipboardCopy = false
-            this.pendingClipboardPaste = false
             this.stream.getInput().raiseAllKeys()
         })
         document.addEventListener("visibilitychange", () => {
@@ -436,29 +438,44 @@ class ViewerApp implements Component {
 
     setClipboardShortcutsEnabled(enabled: boolean) {
         this.clipboardShortcutsEnabled = enabled
-        if (!enabled) {
-            this.pendingClipboardCopy = false
-            this.pendingClipboardPaste = false
-        }
         this.settings.clipboardShortcuts = enabled
         setLocalStreamSettings(this.settings)
+    }
+
+    private onClipboardShortcutKeyDown(event: KeyboardEvent) {
+        const isCopy = this.isClipboardShortcut(event, "KeyC")
+        const isPaste = this.isClipboardShortcut(event, "KeyV")
+        if (!isCopy && !isPaste) {
+            return
+        }
+
+        // Own the opted-in browser shortcut before sidebar/modal propagation
+        // guards can consume it or the raw chord can reach the remote desktop.
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.repeat) {
+            return
+        }
+
+        this.onUserInteraction()
+        if (isCopy) {
+            // Start within the trusted key gesture. The component handles the
+            // host round-trip and selects the fallback text when browser
+            // clipboard-write permission is unavailable.
+            void this.sidebar.getClipboard().copySelectionFromDesktop()
+        } else {
+            // Browser clipboard reads require a trusted gesture in several
+            // engines, so do not defer this work to key-up or a timer.
+            this.stream.getInput().raiseAllKeys()
+            void this.sidebar.getClipboard().pasteBrowserClipboard()
+        }
     }
 
     onKeyDown(event: KeyboardEvent) {
         this.onUserInteraction()
 
         console.debug(event)
-        if (this.isClipboardShortcut(event, "KeyV")) {
-            // Leave the browser default intact so the paste event carries the
-            // clipboard payload. Do not forward the raw shortcut to the host.
-            this.pendingClipboardPaste = true
-        } else if (this.isClipboardShortcut(event, "KeyC")) {
-            event.preventDefault()
-            if (!event.repeat) {
-                this.sendRemoteControlShortcut(StreamKeys.VK_KEY_C)
-                this.pendingClipboardCopy = true
-            }
-        } else if (event.shiftKey && event.ctrlKey && event.code == "KeyV") {
+        if (event.shiftKey && event.ctrlKey && event.code == "KeyV") {
             // We are likely pasting -> don't send keys
         } else if (event.code == "F11") {
             // Allow manual fullscreen
@@ -473,24 +490,6 @@ class ViewerApp implements Component {
     private isTogglingFullscreenWithKeybind: "waitForCtrl" | "makingFullscreen" | "none" = "none"
     onKeyUp(event: KeyboardEvent) {
         this.onUserInteraction()
-
-        if (event.code === "KeyV" && this.pendingClipboardPaste) {
-            this.pendingClipboardPaste = false
-            event.preventDefault()
-            event.stopPropagation()
-            return
-        }
-        if (event.code === "KeyC" && this.pendingClipboardCopy) {
-            event.preventDefault()
-            event.stopPropagation()
-            this.pendingClipboardCopy = false
-            if (this.sidebar.getClipboard().isCopyOutAvailable()) {
-                window.setTimeout(() => {
-                    void this.sidebar.getClipboard().copyFromDesktop()
-                }, 350)
-            }
-            return
-        }
 
         event.preventDefault()
         this.stream.getInput().onKeyUp(event)
