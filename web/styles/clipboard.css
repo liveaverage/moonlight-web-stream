@@ -46,10 +46,19 @@
     gap: 6px;
 }
 
-.stream-clipboard-actions button {
+.stream-clipboard-actions > button.nv-button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    min-height: 44px;
     margin: 0;
-    padding: 7px;
+    padding: 0 12px;
     font-size: 0.85rem;
+    line-height: 1.2;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
 }
 
 .stream-clipboard-shortcuts {

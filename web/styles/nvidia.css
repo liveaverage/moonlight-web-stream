@@ -626,7 +626,59 @@ input[type="range"]:focus-visible { filter: drop-shadow(0 0 6px rgba(118, 185, 0
 }
 
 .sidebar-content { padding: 12px; }
-.stream-clipboard { border-color: var(--border-color-base, #484848); }
+
+.sidebar-stream {
+    box-sizing: border-box;
+    width: min(360px, 72vw);
+    gap: 8px;
+}
+
+.sidebar-stream-buttons {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.sidebar-stream-buttons > button.nv-button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+    justify-content: center;
+    text-align: center;
+}
+
+.sidebar-stream > .input-div {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 4px 0;
+    gap: 12px;
+}
+
+.sidebar-stream > .input-div > label:first-child {
+    margin: 0;
+}
+
+.sidebar-stream > .input-div > select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    margin: 0;
+}
+
+.sidebar-stream .stream-clipboard {
+    width: 100%;
+    margin-top: 0;
+    border-color: var(--border-color-base, #484848);
+}
+
 .stream-clipboard-editor { background: var(--background-color-interaction-base, #242424); }
 
 .notification-element {
