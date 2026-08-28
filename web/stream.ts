@@ -418,11 +418,18 @@ class ViewerApp implements Component {
 
     // Keyboard
     private isClipboardShortcut(event: KeyboardEvent, code: "KeyC" | "KeyV"): boolean {
+        const expectedKey = code === "KeyC" ? "c" : "v"
+        const modifierPressed = event.ctrlKey
+            || event.metaKey
+            || event.getModifierState("Control")
+            || event.getModifierState("Meta")
+            || event.getModifierState("OS")
+
         return this.clipboardShortcutsEnabled
-            && (event.ctrlKey || event.metaKey)
+            && modifierPressed
             && !event.altKey
             && !event.shiftKey
-            && event.code === code
+            && (event.code === code || event.key.toLowerCase() === expectedKey)
     }
 
     sendRemoteControlShortcut(key: number) {
@@ -460,7 +467,10 @@ class ViewerApp implements Component {
         // Own the opted-in browser shortcut before sidebar/modal propagation
         // guards can consume it or the raw chord can reach the remote desktop.
         event.preventDefault()
-        event.stopPropagation()
+        // This capture listener and the stream input listener can both run on
+        // document when no child control is focused. Stop the latter as well,
+        // otherwise Command+C/V can leak through as Meta+C/V to the host.
+        event.stopImmediatePropagation()
         if (event.repeat) {
             return
         }
