@@ -113,11 +113,57 @@ jobs:
           web-server${{ matrix.app-suffix }}
           static
 
+  build-windows-arm64:
+    name: Build aarch64-pc-windows-msvc
+    needs: test
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: aarch64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: aarch64-pc-windows-msvc
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+      - name: Install Wasm-Bindgen
+        run: cargo binstall --force wasm-bindgen-cli
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cargo build --release --target aarch64-pc-windows-msvc
+          npm ci
+          npm run build
+          Move-Item dist static
+          Move-Item target/aarch64-pc-windows-msvc/release/web-server.exe web-server.exe
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: moonlight-web-aarch64-pc-windows-msvc
+          path: |
+            web-server.exe
+            static
+
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs:
+      - build
+      - build-windows-arm64
   
     outputs:
       upload_url: ${{ steps.release.outputs.upload_url }}
@@ -139,12 +185,15 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
     - build
+    - build-windows-arm64
     - create-release
 
     strategy:
       matrix:
         include:
           - target: x86_64-pc-windows-gnu
+            suffix: .exe
+          - target: aarch64-pc-windows-msvc
             suffix: .exe
           - target: x86_64-unknown-linux-gnu
             suffix: ""
