@@ -142,6 +142,8 @@ jobs:
 
       - name: Build
         shell: pwsh
+        env:
+          RUSTFLAGS: -D warnings -C target-feature=+crt-static
         run: |
           cargo build --release --target aarch64-pc-windows-msvc
           npm ci
