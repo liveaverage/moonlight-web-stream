@@ -93,8 +93,12 @@ export function getLocalStreamSettings(defaultSettings: Settings) {
             // Finally override with user settings
             settings = deepMerge(settings, loaded)
         }
-    } catch (e) {
-        localStorage.removeItem("mlSettings")
+    } catch (error) {
+        try {
+            localStorage.removeItem("mlSettings")
+        } catch {
+            console.warn("Local settings are unavailable in this embedded context.", error)
+        }
     }
 
     // Migration
@@ -103,7 +107,11 @@ export function getLocalStreamSettings(defaultSettings: Settings) {
     return settings
 }
 export function setLocalStreamSettings(settings?: Settings) {
-    localStorage.setItem("mlSettings", JSON.stringify(settings))
+    try {
+        localStorage.setItem("mlSettings", JSON.stringify(settings))
+    } catch (error) {
+        console.warn("Local settings are unavailable in this embedded context.", error)
+    }
 }
 
 export type StreamSettingsChangeListener = (event: ComponentEvent<StreamSettingsComponent>) => void

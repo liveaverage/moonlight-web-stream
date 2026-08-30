@@ -1,4 +1,3 @@
-import { globalDefaultSettings, getLocalStreamSettings } from "../component/settings_menu"
 import { getCustomTheme, PageStyle } from "./themes"
 
 // CSS is injected lazily so only the selected theme affects the page.
@@ -78,6 +77,3 @@ export function setStyle(requestedStyle: PageStyle) {
 export function getStyle(): PageStyle {
     return currentStyle ?? "standard"
 }
-
-const settings = getLocalStreamSettings(globalDefaultSettings())
-setStyle(settings.pageStyle)

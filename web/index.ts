@@ -36,18 +36,22 @@ async function startApp() {
     }
 
     let lastAppState: AppState | null = null
-    if (sessionStorage) {
-        const lastStateText = sessionStorage.getItem("mlState")
+    try {
+        const lastStateText = window.sessionStorage?.getItem("mlState")
         if (lastStateText) {
             lastAppState = JSON.parse(lastStateText)
         }
+    } catch (error) {
+        console.warn("Session state is unavailable in this embedded context.", error)
     }
 
     const app = new MainApp(api, bootstrapRole.role)
     app.mount(rootElement)
 
     window.addEventListener("popstate", event => {
-        app.setAppState(event.state, false)
+        if (event.state) {
+            app.setAppState(event.state, false)
+        }
     })
 
     app.forceFetch()
@@ -62,17 +66,29 @@ startApp()
 type DisplayStates = "hosts" | "games" | "settings"
 
 type AppState = { display: DisplayStates, hostId?: number }
+let appHistoryAvailable = true
 function setAppState(state: AppState, pushHistory: boolean) {
-    if (pushHistory) {
-        history.pushState(state, "")
+    if (pushHistory && appHistoryAvailable) {
+        try {
+            history.pushState(state, "")
+        } catch (error) {
+            appHistoryAvailable = false
+            console.warn("History state is unavailable in this embedded context.", error)
+        }
     }
 
-    if (sessionStorage) {
-        sessionStorage.setItem("mlState", JSON.stringify(state))
+    try {
+        window.sessionStorage?.setItem("mlState", JSON.stringify(state))
+    } catch (error) {
+        console.warn("Session state is unavailable in this embedded context.", error)
     }
 }
-function backAppState() {
+function backAppState(): boolean {
+    if (!appHistoryAvailable) {
+        return false
+    }
     history.back()
+    return true
 }
 
 class MainApp implements Component {
@@ -153,7 +169,11 @@ class MainApp implements Component {
         // Back button
         this.backButton.innerText = I.index.back
         this.backButton.classList.add("button-fit-content")
-        this.backButton.addEventListener("click", backAppState)
+        this.backButton.addEventListener("click", () => {
+            if (!backAppState()) {
+                this.setCurrentDisplay("hosts", null, false)
+            }
+        })
         this.backButton.dataset.variant = "back-button"
 
         // Host add button

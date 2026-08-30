@@ -1,5 +1,5 @@
 import "./polyfill/index"
-import "./styles/index"
+import { setStyle as setPageStyle } from "./styles/index"
 import { Api, apiGetRole, getApi } from "./api"
 import { Component } from "./component/index"
 import { showNotification } from "./component/notification"
@@ -30,6 +30,7 @@ async function startApp() {
     const queryParams = new URLSearchParams(location.search)
     let lang = parseLanguageFromQuery(queryParams)
     const bootstrapRole = await apiGetRole(api, { id: null })
+    setPageStyle(getLocalStreamSettings(bootstrapRole.role.default_settings).pageStyle)
     if (!lang) {
         adoptRoleDefaultLanguage(bootstrapRole.role.default_settings)
         lang = getCurrentLanguage()
