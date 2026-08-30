@@ -26,6 +26,7 @@ async function startApp() {
 
     const bootstrapRole = await apiGetRole(api, { id: null })
     adoptRoleDefaultLanguage(bootstrapRole.role.default_settings)
+    setPageStyle(getLocalStreamSettings(bootstrapRole.role.default_settings).pageStyle)
     I = getTranslations(getCurrentLanguage())
 
     const rootElement = document.getElementById("root");
