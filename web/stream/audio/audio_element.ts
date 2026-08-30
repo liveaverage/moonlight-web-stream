@@ -56,6 +56,11 @@ export class AudioElementPlayer implements TrackAudioPlayer {
 
     onUserInteraction(): void {
         this.audioElement.muted = false
+        if (this.audioElement.paused) {
+            void this.audioElement.play().catch(error => {
+                console.debug(`Failed to start audio playback: ${error}`)
+            })
+        }
     }
 
     mount(parent: HTMLElement): void {
