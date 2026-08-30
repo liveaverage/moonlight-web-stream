@@ -68,9 +68,14 @@ export function adoptRoleDefaultLanguage(roleDefaultSettings: { language?: unkno
         settings.language = roleLanguage
         localStorage.setItem("mlSettings", JSON.stringify(settings))
         return true
-    } catch {
-        localStorage.setItem("mlSettings", JSON.stringify({ language: roleLanguage }))
-        return true
+    } catch (error) {
+        try {
+            localStorage.setItem("mlSettings", JSON.stringify({ language: roleLanguage }))
+            return true
+        } catch {
+            console.warn("Language settings are unavailable in this embedded context.", error)
+            return false
+        }
     }
 }
 

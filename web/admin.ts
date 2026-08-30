@@ -1,5 +1,5 @@
 import "./polyfill/index"
-import "./styles/index"
+import { setStyle as setPageStyle } from "./styles/index"
 import { Api, apiGetRole, apiGetUser, apiLogout, apiPostRole, apiPostUser, FetchError, getApi } from "./api"
 import { Component, ComponentEvent } from "./component/index"
 import { showNotification } from "./component/notification"
@@ -16,6 +16,7 @@ import { RoleList } from "./component/roles/list"
 import { DetailedRolePage } from "./component/roles/detailed_page"
 import { AddRoleModal } from "./component/roles/add_modal"
 import { adoptRoleDefaultLanguage, getCurrentLanguage, getTranslations } from "./i18n"
+import { getLocalStreamSettings } from "./component/settings_menu"
 
 let I = getTranslations(getCurrentLanguage())
 
@@ -26,6 +27,7 @@ async function startApp() {
 
     const bootstrapRole = await apiGetRole(api, { id: null })
     adoptRoleDefaultLanguage(bootstrapRole.role.default_settings)
+    setPageStyle(getLocalStreamSettings(bootstrapRole.role.default_settings).pageStyle)
     I = getTranslations(getCurrentLanguage())
 
     checkPermissions(api)
@@ -43,11 +45,13 @@ async function startApp() {
 
     // -- App states
     let lastAppState: AppState | null = null
-    if (sessionStorage) {
-        const lastStateText = sessionStorage.getItem("mlAdminState")
+    try {
+        const lastStateText = window.sessionStorage?.getItem("mlAdminState")
         if (lastStateText) {
             lastAppState = JSON.parse(lastStateText)
         }
+    } catch (error) {
+        console.warn("Session state is unavailable in this embedded context.", error)
     }
 
     window.addEventListener("popstate", event => {
@@ -76,17 +80,22 @@ async function checkPermissions(api: Api) {
 
 type AppState = { tab: "users", user_id: number | null } |
 { tab: "roles", role_id: number | null }
+let appHistoryAvailable = true
 function pushAppState(state: AppState, pushHistory: boolean) {
-    if (pushHistory) {
-        history.pushState(state, "")
+    if (pushHistory && appHistoryAvailable) {
+        try {
+            history.pushState(state, "")
+        } catch (error) {
+            appHistoryAvailable = false
+            console.warn("History state is unavailable in this embedded context.", error)
+        }
     }
 
-    if (sessionStorage) {
-        sessionStorage.setItem("mlAdminState", JSON.stringify(state))
+    try {
+        window.sessionStorage?.setItem("mlAdminState", JSON.stringify(state))
+    } catch (error) {
+        console.warn("Session state is unavailable in this embedded context.", error)
     }
-}
-function backAppState() {
-    history.back()
 }
 
 startApp()
