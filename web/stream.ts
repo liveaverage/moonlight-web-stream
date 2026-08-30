@@ -544,14 +544,14 @@ class ViewerApp implements Component {
 
     // Mouse
     onMouseButtonDown(event: MouseEvent) {
+        this.onUserInteraction()
+
         if (this.consumeAutoFullscreenInteraction()) {
             this.pendingAutoFullscreenMouseGesture = true
             event.preventDefault()
             event.stopPropagation()
             return
         }
-
-        this.onUserInteraction()
 
         event.preventDefault()
         this.stream.getInput().onMouseDown(event, this.getStreamRect());
@@ -599,13 +599,13 @@ class ViewerApp implements Component {
 
     // Touch
     onTouchStart(event: TouchEvent) {
+        this.onUserInteraction()
+
         if (this.beginAutoFullscreenTouchGesture()) {
             event.preventDefault()
             event.stopPropagation()
             return
         }
-
-        this.onUserInteraction()
 
         event.preventDefault()
         this.stream.getInput().onTouchStart(event, this.getStreamRect())
