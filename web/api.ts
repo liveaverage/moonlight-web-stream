@@ -4,6 +4,7 @@ import { showMessage, showModal } from "./component/modal/index"
 import { ApiUserPasswordPrompt } from "./component/modal/login"
 import { buildUrl } from "./config_"
 import { WebRtcLinkHeader_Tags, webrtcLinkHeaderParse } from "./uniffi/moonlight_common_bindings"
+import { StreamedJsonResponse } from "./streamed_json_response"
 
 // IMPORTANT: this should be a bit bigger than the moonlight-common reqwest backend timeout if some hosts are offline!
 const API_TIMEOUT = 12000
@@ -201,41 +202,6 @@ export class FetchError extends Error {
 
     getResponse(): Response | null {
         return this.response ?? null
-    }
-}
-
-class StreamedJsonResponse<Initial, Other> {
-    response: Initial
-
-    private reader
-    private decoder = new TextDecoder()
-    private bufferedText = ""
-
-    constructor(body: ReadableStreamDefaultReader, response: Initial) {
-        this.reader = body
-        this.response = response
-    }
-
-    async next(): Promise<Other | null> {
-        while (true) {
-            const { done, value } = await this.reader.read()
-
-            if (done) {
-                return null
-            }
-
-            this.bufferedText += this.decoder.decode(value)
-
-            const split = this.bufferedText.split("\n", 2)
-            if (split.length == 2) {
-                this.bufferedText = split[1]
-
-                const text = split[0]
-                const json = JSON.parse(text)
-
-                return json
-            }
-        }
     }
 }
 

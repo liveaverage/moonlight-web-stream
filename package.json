@@ -22,6 +22,7 @@
     "url": "This is required for uniffi-bindgen-react-native"
   },
   "scripts": {
+    "test:streamed-json": "node --test tests/streamed_json_response.test.ts",
     "dev": "npm run prebuild && webpack --watch --mode=development",
     "build": "npm run prebuild && webpack --mode=production",
     "prebuild": "npm run generate-bindings && npm run build-moonlight-common",
