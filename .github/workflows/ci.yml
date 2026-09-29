@@ -98,7 +98,7 @@ jobs:
     - name: Install Cross
       run: cargo binstall --force cross
     - name: Install Wasm-Bindgen
-      run: cargo binstall --force wasm-bindgen-cli
+      run: cargo binstall --force --no-confirm wasm-bindgen-cli@0.2.127
   
     # Build
     - name: Build
@@ -145,7 +145,7 @@ jobs:
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@main
       - name: Install Wasm-Bindgen
-        run: cargo binstall --force wasm-bindgen-cli
+        run: cargo binstall --force --no-confirm wasm-bindgen-cli@0.2.127
 
       - name: Build
         shell: pwsh
