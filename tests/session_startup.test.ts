@@ -8,7 +8,6 @@ test("recovers from bridge restart responses within one deadline", async t => {
     const startup = new SessionStartup(Date.now() + 500, 1)
     assert.equal((await startup.fetch("https://example.test/host", {})).status, 200)
     assert.equal(fetch.mock.callCount(), 4)
-    assert.equal(startup.retries, 3)
 })
 
 test("network interruption can recover without stopping the application", async t => {

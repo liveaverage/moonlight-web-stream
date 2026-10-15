@@ -80,8 +80,10 @@ stream; it does not cancel the Sunshine application. Another running application
 is never stopped automatically; administrators can still cancel it through their
 existing administrative tools or the host API.
 
-A Connecting state covers transient network and HTTP 502/503/504 startup failures
-within a shared 30-second budget. Authentication, pairing and permanent errors
+A Connecting state covers failed viewer-page loads, transient network errors,
+and HTTP 502/503/504 startup failures within a shared 30-second budget. The viewer
+finishes loading before it can start a stream; retrying its page does not replay
+a stream-creation request. Authentication, pairing and permanent errors
 remain actionable. Repeated clicks focus the existing connection window instead
 of creating duplicates. If the connection fails, close that window and try again.
 Established streams keep their existing transport and disconnect behavior; this

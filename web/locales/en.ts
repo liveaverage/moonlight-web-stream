@@ -195,7 +195,6 @@ export const en = {
         pairingRequired: "Pair this host before connecting.",
         otherSessionRunning: "Another application is running. Contact an administrator to stop it.",
         connectionFailed: "Could not connect to the desktop. Sign in again if needed, then try connecting again.",
-        backToDesktops: "Back to desktops",
 
         resumeSession: "Resume Session",
         stopCurrentSession: "Stop Current Session",

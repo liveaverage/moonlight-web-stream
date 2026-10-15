@@ -1,6 +1,7 @@
 import "./polyfill/index"
 import { setStyle as setPageStyle } from "./styles/index"
-import { Api, apiGetRole, getApi } from "./api"
+import { Api, apiGetRole, getApi, FetchError, sessionStartup } from "./api"
+import { desktopWindowStartup } from "./desktop_window"
 import { Component } from "./component/index"
 import { showNotification } from "./component/notification"
 import { getModalBackground, Modal, showMessage, showModal } from "./component/modal/index"
@@ -21,6 +22,7 @@ import { LogMessageType } from "./stream/log"
 import { ClipboardComponent } from "./component/clipboard"
 
 let I = getTranslations(getCurrentLanguage())
+const startupWindow = sessionStartup ? desktopWindowStartup(sessionStartup) : null
 
 async function startApp() {
     const uniffiInit = uniffiInitAsync()
@@ -93,6 +95,7 @@ async function startApp() {
     uniffiSetLogger(new CustomUniffiLogger(), LogLevel.Debug)
 
     // Start and Mount App
+    await startupWindow?.ready()
     const app = new ViewerApp(api, hostId, appId, bootstrapRole.role, parseSettingsFromQuery(queryParams))
     app.mount(rootElement);
 
@@ -153,7 +156,14 @@ function parseLanguageFromQuery(queryParams: URLSearchParams): Language | undefi
     return language ? normalizeLanguage(language) : undefined
 }
 
-startApp()
+startApp().catch(error => {
+    if (startupWindow && (error instanceof TypeError || (error instanceof FetchError && error.isTransient()))) {
+        startupWindow.retry()
+        return
+    }
+    startupWindow?.fail()
+    throw error
+})
 
 class ViewerApp implements Component {
     private api: Api

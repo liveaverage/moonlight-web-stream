@@ -17,15 +17,17 @@ class FetchError extends Error {
     isTransient() { return [502, 503, 504].includes(this.status) }
 }
 
-function fixture({ enabled = true, running = 1, paired = "Paired" } = {}) {
-    const startup = enabled ? new SessionStartup(Date.now() + 500, 1) : null
+function fixture({ enabled = true, running = 1, paired = "Paired", budget = 500 } = {}) {
+    const startup = enabled ? new SessionStartup(Date.now() + budget, 1) : null
     const calls = { host: 0, attempts: 0, closed: 0, logs: [] as string[] }
     const api = { sessionStartup: startup, FetchError, apiGetHost: async () => {
         calls.host++
         return { paired, current_game: running }
     } }
     const exports: any = {}
-    runInNewContext(streamSource, { exports, require: (name: string) => name == "../api" ? api : {}, TypeError, Event })
+    runInNewContext(streamSource, { exports, require: (name: string) => name == "../api" ? api : name == "./video" ? {
+        emptyVideoCodecs: () => ({}), hasAnyCodec: () => true,
+    } : {}, TypeError, Event, navigator: { userAgent: "Chromium" } })
     // Exercise the actual startup orchestration without starting media pipelines.
     const stream = Object.create(exports.Stream.prototype)
     Object.assign(stream, { api: {}, hostId: 7, appId: 1, stopped: false, connected: false,
@@ -123,4 +125,39 @@ test("session cleanup still sends DELETE after startup cancellation", async () =
     assert.equal(requests.length, 1)
     assert.equal(requests[0].method, "DELETE")
     assert.equal(requests[0].signal?.aborted, false)
+})
+
+for (const enabled of [true, false]) {
+    test(`capability worker load failure retries only when resume-only is ${enabled}`, async () => {
+        const f = fixture({ enabled })
+        Object.assign(f.stream, { settings: { videoCodec: "h264" }, streamerSize: [1920, 1080],
+            queryVideoCodecs: async () => {
+                if (f.calls.attempts === 1) throw new Event("error")
+                return { h264: true }
+            },
+            connectWithConfiguredTransport: async () => {
+                f.calls.attempts++
+                return f.Stream.prototype.createTransportOptions.call(f.stream)
+            },
+        })
+        if (enabled) {
+            await f.stream.startConnection()
+            assert.equal(f.calls.attempts, 2)
+            assert.equal(f.calls.host, 2)
+        } else {
+            await assert.rejects(f.stream.startConnection(), error => error instanceof Event)
+            assert.equal(f.calls.attempts, 1)
+        }
+    })
+}
+
+test("a stuck media capability probe cannot outlive the connection budget", async () => {
+    const f = fixture({ budget: 20 })
+    Object.assign(f.stream, { settings: { videoCodec: "h264" },
+        queryVideoCodecs: () => new Promise(() => {}),
+        connectWithConfiguredTransport: () => f.Stream.prototype.createTransportOptions.call(f.stream),
+    })
+    await f.stream.startConnection()
+    assert(f.calls.logs.some(message => message.includes("30 seconds")))
+    assert.equal(f.calls.host, 1)
 })

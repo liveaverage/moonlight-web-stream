@@ -197,7 +197,6 @@ export const ptBR: Translations = {
         pairingRequired: "Emparelhe este host antes de conectar.",
         otherSessionRunning: "Outro aplicativo está em execução. Contate um administrador para encerrá-lo.",
         connectionFailed: "Não foi possível conectar. Entre novamente se necessário e tente outra vez.",
-        backToDesktops: "Voltar às áreas de trabalho",
 
         resumeSession: "Retomar Sessão",
         stopCurrentSession: "Encerrar Sessão Atual",

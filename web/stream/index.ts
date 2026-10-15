@@ -228,7 +228,16 @@ export class Stream implements Component {
     private async createTransportOptions(): Promise<TransportOptions | null> {
         const codecHint = getVideoCodecHint(this.settings)
 
-        const dataCodecs = await this.queryVideoCodecs("data")
+        let dataCodecs: VideoFormats
+        try {
+            dataCodecs = sessionStartup
+                ? await sessionStartup.withinBudget(() => this.queryVideoCodecs("data"))
+                : await this.queryVideoCodecs("data")
+        } catch (error) {
+            // A service restart can interrupt the capability worker's script load.
+            if (sessionStartup && error instanceof Event) throw new TypeError("Media capability worker could not load")
+            throw error
+        }
 
         if (!hasAnyCodec(codecHint)) {
             this.debugLog("Couldn't find any supported video format. Change the codec option to H264 in the settings if you're unsure which codecs are supported.", { type: "fatalDescription" })
@@ -267,6 +276,9 @@ export class Stream implements Component {
             throw error
         }
 
+        const options = await this.createTransportOptions()
+        if (!options) return "failednoconnect"
+
         this.debugLog("Received WebRTC Config, Creating Transport")
 
         // Create transport
@@ -285,11 +297,6 @@ export class Stream implements Component {
         const onClose = new Promise<TransportShutdown>(resolve => {
             transport.onclose = resolve
         })
-
-        const options = await this.createTransportOptions()
-        if (!options) {
-            return "failednoconnect"
-        }
 
         try {
             // Create offer

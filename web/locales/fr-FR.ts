@@ -197,7 +197,6 @@ export const frFr: Translations = {
         pairingRequired: "Associez cet hôte avant de vous connecter.",
         otherSessionRunning: "Une autre application est en cours. Contactez un administrateur pour l’arrêter.",
         connectionFailed: "Connexion au bureau impossible. Reconnectez-vous si nécessaire, puis réessayez.",
-        backToDesktops: "Retour aux bureaux",
 
         resumeSession: "Reprise de la session",
         stopCurrentSession: "Arrêt de la session",

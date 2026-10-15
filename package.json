@@ -30,7 +30,7 @@
     "build-moonlight-common": "npm run ubrn:checkout && npm run ubrn:build",
     "ubrn:checkout": "ubrn checkout",
     "ubrn:build": "ubrn build web",
-    "test:session-startup": "node --test tests/session_startup.test.ts tests/game_session.test.ts tests/stream_startup.test.ts"
+    "test:session-startup": "node --test tests/session_startup.test.ts tests/game_session.test.ts tests/stream_startup.test.ts tests/desktop_window.test.ts"
   },
   "license": "GPL-3.0-or-later",
   "private": "true",

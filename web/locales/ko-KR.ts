@@ -197,7 +197,6 @@ export const koKR: Translations = {
         pairingRequired: "연결하기 전에 호스트를 페어링하세요.",
         otherSessionRunning: "다른 앱이 실행 중입니다. 중지하려면 관리자에게 문의하세요.",
         connectionFailed: "연결할 수 없습니다. 필요하면 다시 로그인한 후 연결을 다시 시도하세요.",
-        backToDesktops: "데스크톱 목록으로 돌아가기",
 
         resumeSession: "세션 재개",
         stopCurrentSession: "현재 세션 중지",

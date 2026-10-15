@@ -14,7 +14,6 @@ export function isTransientStartupStatus(status: number): boolean {
 export class SessionStartup {
     private controller = new AbortController()
     private complete = false
-    retries = 0
 
     readonly deadline: number
     private retryDelay: number
@@ -88,7 +87,6 @@ export class SessionStartup {
                 this.signal.throwIfAborted()
                 if (!retry || !(error instanceof TypeError || (error instanceof DOMException && error.name == "TimeoutError"))) throw error
             }
-            this.retries++
             await this.pause()
         }
     }
