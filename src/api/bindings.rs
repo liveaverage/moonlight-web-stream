@@ -16,6 +16,7 @@ const EXPORT_PATH: &str = "../web/api_bindings.ts";
 #[derive(Serialize, Deserialize, Debug, TS, Clone)]
 #[ts(export, export_to = EXPORT_PATH)]
 pub struct ConfigJs {
+    pub resume_only: bool,
     pub path_prefix: String,
     pub clipboard_max_text_bytes: usize,
     pub custom_theme: Option<ConfigJsTheme>,

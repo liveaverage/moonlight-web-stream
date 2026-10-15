@@ -192,6 +192,13 @@ export const zhCN: Translations = {
             `服务器编解码支持: ${host.server_codec_mode_support}`,
     },
     game: {
+        connecting: "正在连接…",
+        popupBlocked: "请允许弹出窗口以打开桌面。",
+        pairingRequired: "请先配对此主机。",
+        otherSessionRunning: "其他应用正在运行。请联系管理员停止该应用。",
+        connectionFailed: "无法连接桌面。如有需要，请重新登录后重试。",
+        backToDesktops: "返回桌面列表",
+
         resumeSession: "恢复会话",
         stopCurrentSession: "停止当前会话",
         failedToCloseApp: "关闭应用失败！",

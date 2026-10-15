@@ -190,6 +190,13 @@ export const en = {
             `Server Codec Mode Support: ${host.server_codec_mode_support}`,
     },
     game: {
+        connecting: "Connecting…",
+        popupBlocked: "Allow popups to open the desktop.",
+        pairingRequired: "Pair this host before connecting.",
+        otherSessionRunning: "Another application is running. Contact an administrator to stop it.",
+        connectionFailed: "Could not connect to the desktop. Sign in again if needed, then try connecting again.",
+        backToDesktops: "Back to desktops",
+
         resumeSession: "Resume Session",
         stopCurrentSession: "Stop Current Session",
         failedToCloseApp: "Failed to close app!",

@@ -192,6 +192,13 @@ export const ptBR: Translations = {
             `Suporte a Codecs do Servidor: ${host.server_codec_mode_support}`,
     },
     game: {
+        connecting: "Conectando…",
+        popupBlocked: "Permita pop-ups para abrir a área de trabalho.",
+        pairingRequired: "Emparelhe este host antes de conectar.",
+        otherSessionRunning: "Outro aplicativo está em execução. Contate um administrador para encerrá-lo.",
+        connectionFailed: "Não foi possível conectar. Entre novamente se necessário e tente outra vez.",
+        backToDesktops: "Voltar às áreas de trabalho",
+
         resumeSession: "Retomar Sessão",
         stopCurrentSession: "Encerrar Sessão Atual",
         failedToCloseApp: "Falha ao fechar o aplicativo!",

@@ -212,6 +212,9 @@ fn default_include_loopback_candidates() -> bool {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebServerConfig {
+    /// Connect directly without showing application cancellation controls.
+    #[serde(default)]
+    pub resume_only: bool,
     #[serde(default = "default_bind_address")]
     pub bind_address: SocketAddr,
     pub certificate: Option<ConfigSsl>,
@@ -279,6 +282,7 @@ pub struct ConfigSsl {
 impl Default for WebServerConfig {
     fn default() -> Self {
         Self {
+            resume_only: false,
             bind_address: default_bind_address(),
             certificate: None,
             url_path_prefix: "".to_string(),
@@ -401,5 +405,31 @@ mod tests {
                 .stylesheet,
             "themes/example.css"
         );
+    }
+}
+
+#[cfg(test)]
+mod session_config_tests {
+    use super::WebServerConfig;
+
+    #[test]
+    fn resume_only_is_opt_in_for_existing_configs() {
+        let mut value =
+            serde_json::to_value(WebServerConfig::default()).expect("serialize defaults");
+        value
+            .as_object_mut()
+            .expect("config object")
+            .remove("resume_only");
+        let config: WebServerConfig = serde_json::from_value(value).expect("read legacy config");
+        assert!(!config.resume_only);
+    }
+
+    #[test]
+    fn resume_only_can_be_enabled() {
+        let mut value =
+            serde_json::to_value(WebServerConfig::default()).expect("serialize defaults");
+        value["resume_only"] = serde_json::json!(true);
+        let config: WebServerConfig = serde_json::from_value(value).expect("read enabled config");
+        assert!(config.resume_only);
     }
 }

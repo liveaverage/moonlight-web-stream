@@ -1,17 +1,19 @@
 import { Component, ComponentEvent } from "../index"
-import { Api, apiGetAppImage, apiHostCancel } from "../../api"
+import { Api, apiGetAppImage, apiGetHost, apiHostCancel } from "../../api"
 import { App } from "../../api_bindings"
 import { getCurrentLanguage, getTranslations } from "../../i18n"
 import { setContextMenu } from "../context_menu"
 import { showMessage } from "../modal/index"
 import { APP_NO_IMAGE } from "../../resources/index"
-import { buildUrl } from "../../config_"
+import { CONFIG, buildUrl } from "../../config_"
+import { SessionStartup } from "../../session_startup"
 
 export type GameCache = App & { activeApp: number | null }
 
 export type GameEventListener = (event: ComponentEvent<Game>) => void
 
 export class Game implements Component {
+    private static desktopWindows = new Map<string, Window>()
     private api: Api
 
     private hostId: number
@@ -94,6 +96,10 @@ export class Game implements Component {
 
     private async onClick(event: MouseEvent) {
         const i = getTranslations(getCurrentLanguage()).game
+        if (CONFIG.resume_only) {
+            this.startStream()
+            return
+        }
         if (this.cache.activeApp != null) {
             const elements = []
 
@@ -134,7 +140,71 @@ export class Game implements Component {
             this.divElement.dispatchEvent(event)
         }
     }
+    private async startDesktopStream() {
+        const i = getTranslations(getCurrentLanguage()).game
+        const key = `${CONFIG.path_prefix}:${this.hostId}`
+        const existing = Game.desktopWindows.get(key)
+        if (existing && !existing.closed) {
+            existing.focus()
+            return
+        }
+        const standalone = window.matchMedia('(display-mode: standalone)').matches
+        const target = standalone ? window : window.open("", `moonlight-${key}`)
+        if (!target) {
+            await showMessage(i.popupBlocked)
+            return
+        }
+        Game.desktopWindows.set(key, target)
+        const status = document.createElement("p")
+        status.textContent = i.connecting
+        status.setAttribute("role", "status")
+        this.divElement.appendChild(status)
+        const startup = new SessionStartup()
+        if (!standalone) {
+            target.document.title = i.connecting
+            target.document.body.textContent = i.connecting
+        }
+        try {
+            // Observe a short stable interval so a scheduled restart cannot look ready for just one probe.
+            let ready = 0
+            while (ready < 3) {
+                if (target.closed) return
+                const retries = startup.retries
+                const host = await apiGetHost(this.api, { host_id: this.hostId }, startup)
+                if (host.paired != "Paired") throw new Error(i.pairingRequired)
+                if (host.current_game != 0 && host.current_game != this.appId) throw new Error(i.otherSessionRunning)
+                if (startup.retries != retries) ready = 0
+                ready++
+                if (ready < 3) await startup.pause()
+            }
+            if (target.closed) return
+            const query = new URLSearchParams({ hostId: String(this.hostId), appId: String(this.appId), connectBy: String(startup.deadline) })
+            target.location.href = buildUrl(`/stream.html?${query}`)
+            this.divElement.dispatchEvent(new ComponentEvent("ml-gamereload", this))
+        } catch (error) {
+            Game.desktopWindows.delete(key)
+            const message = error instanceof Error && [i.pairingRequired, i.otherSessionRunning].includes(error.message)
+                ? error.message : i.connectionFailed
+            if (!standalone && !target.closed) {
+                target.document.body.textContent = message
+                const back = target.document.createElement("a")
+                back.href = buildUrl("/")
+                back.textContent = i.backToDesktops
+                target.document.body.appendChild(back)
+            } else {
+                await showMessage(message)
+            }
+        } finally {
+            status.remove()
+        }
+    }
+
     private startStream() {
+        if (CONFIG.resume_only) {
+            void this.startDesktopStream()
+            return
+        }
+
         let query = new URLSearchParams({
             hostId: this.getHostId(),
             appId: this.getAppId(),

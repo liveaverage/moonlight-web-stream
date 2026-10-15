@@ -1,4 +1,4 @@
-import { Api, apiWebRTCConfiguration, apiWebRTCOffer } from "../api"
+import { Api, apiGetHost, apiWebRTCConfiguration, apiWebRTCOffer, FetchError, sessionStartup } from "../api"
 import { Component } from "../component/index"
 import { Settings, TransportType } from "../component/settings_menu"
 import { ControlPacket, ControlPacket_Tags, VideoFormats } from "../uniffi/moonlight_common_bindings"
@@ -158,7 +158,36 @@ export class Stream implements Component {
         }
     }
 
+    private stopped = false
+    private connected = false
+
     async startConnection() {
+        if (!sessionStartup) return this.connectWithConfiguredTransport()
+        this.debugLog("Connecting…")
+        try {
+            while (!this.stopped) {
+                try {
+                    const host = await apiGetHost(this.api, { host_id: this.hostId })
+                    if (host.paired != "Paired") throw new Error("Pair this host before connecting.")
+                    if (host.current_game != 0 && host.current_game != this.appId) throw new Error("Another application is running. Contact an administrator to stop it.")
+                    await this.connectWithConfiguredTransport()
+                    return
+                } catch (error) {
+                    if (this.stopped) return
+                    if (this.connected || !(error instanceof TypeError || (error instanceof FetchError && error.isTransient()))) throw error
+                    this.debugLog("Connecting… waiting for the desktop service")
+                    await this.transport?.close()
+                    this.transport = null
+                    await sessionStartup.pause()
+                }
+            }
+        } catch (error) {
+            if (!this.connected) await this.transport?.close()
+            if (!this.stopped) this.debugLog(`${error}`, { type: "fatalDescription" })
+        }
+    }
+
+    private async connectWithConfiguredTransport() {
         this.debugLog(`Permissions: ${JSON.stringify(this.permissions)}`)
 
         const desiredTransport = this.transportOverride ?? this.settings.dataTransport
@@ -167,6 +196,7 @@ export class Stream implements Component {
         if (desiredTransport == "auto") {
             let shutdownReason = await this.tryWebRTCTransport()
 
+            if (sessionStartup && this.stopped) return
             if (shutdownReason == "failednoconnect") {
                 this.debugLog("Failed to establish WebRTC connection. Falling back to Web Socket transport.", { type: "ifErrorDescription" })
                 await this.tryWebSocketTransport()
@@ -228,7 +258,14 @@ export class Stream implements Component {
         this.debugLog("Trying WebRTC transport")
 
         // Get configuration
-        const config = await apiWebRTCConfiguration(this.api)
+        let config
+        try {
+            config = await apiWebRTCConfiguration(this.api)
+        } catch (error) {
+            // An absent WebRTC endpoint still permits the existing automatic WebSocket fallback.
+            if (sessionStartup && error instanceof FetchError && [404, 405, 501].includes(error.getResponse()?.status ?? 0)) return "failednoconnect"
+            throw error
+        }
 
         this.debugLog("Received WebRTC Config, Creating Transport")
 
@@ -256,7 +293,9 @@ export class Stream implements Component {
 
         try {
             // Create offer
-            const offer = await transport.createOffer(options)
+            const offer = sessionStartup
+                ? await sessionStartup.withinBudget(() => transport.createOffer(options))
+                : await transport.createOffer(options)
 
             // Send Request
             this.debugLog("Sending Offer and waiting for Answer")
@@ -264,11 +303,14 @@ export class Stream implements Component {
             this.debugLog("Got Response")
 
             // Apply answer
-            await transport.setAnswer(answer)
+            if (sessionStartup) await sessionStartup.withinBudget(() => transport.setAnswer(answer))
+            else await transport.setAnswer(answer)
         } catch (error) {
             this.debugLog(`failed to connect using webrtc because ${error}`)
 
             await transport.close()
+            if (sessionStartup?.signal.aborted) throw error
+            if (sessionStartup && error instanceof FetchError && ![404, 405, 501].includes(error.getResponse()?.status ?? 0)) throw error
             return "failednoconnect"
         }
 
@@ -277,14 +319,16 @@ export class Stream implements Component {
 
         // Wait for negotiation, but don't let a stuck ICE check block fallback forever.
         const onTimeout: Promise<TransportShutdown> =
-            wait(WEBRTC_CONNECT_TIMEOUT_MS)
+            wait(sessionStartup ? Math.min(WEBRTC_CONNECT_TIMEOUT_MS, sessionStartup.remaining) : WEBRTC_CONNECT_TIMEOUT_MS)
                 .then(() => "failednoconnect")
 
-        const connectData: TransportShutdown | TransportConnectData = await Promise.race([
+        const negotiation = () => Promise.race([
             onConnect,
             onClose,
             onTimeout,
         ])
+        const connectData: TransportShutdown | TransportConnectData = sessionStartup
+            ? await sessionStartup.withinBudget(negotiation) : await negotiation()
         if (typeof connectData == "string") {
             this.debugLog(`webrtc connection failed: ${connectData}`)
             await transport.close()
@@ -322,15 +366,20 @@ export class Stream implements Component {
             transport.onclose = resolve
         })
 
-        // Start stream
-        await transport.startStream(options)
-
-        this.setTransport(transport)
-
-        const connectData = await Promise.race([
-            onConnect,
-            onClose,
-        ])
+        // Bound only startup; an established stream can continue indefinitely.
+        let connectData: TransportConnectData | TransportShutdown
+        try {
+            if (sessionStartup) await sessionStartup.withinBudget(() => transport.startStream(options))
+            else await transport.startStream(options)
+            this.setTransport(transport)
+            connectData = sessionStartup
+                ? await sessionStartup.withinBudget(() => Promise.race([onConnect, onClose]))
+                : await Promise.race([onConnect, onClose])
+        } catch (error) {
+            await transport.close()
+            if (sessionStartup && error instanceof Event) throw new TypeError("WebSocket connection could not open")
+            throw error
+        }
 
         if (typeof connectData == "string") {
             this.debugLog(`web socket connection failed: ${connectData}`)
@@ -346,6 +395,8 @@ export class Stream implements Component {
     }
 
     private async onConnect(connectData: TransportConnectData) {
+        this.connected = true
+        sessionStartup?.finish()
         this.logger.debug("connected successfully, creating video and audio pipelines")
 
         // Dispatch app event
@@ -556,6 +607,8 @@ export class Stream implements Component {
     }
 
     async stop(): Promise<boolean> {
+        this.stopped = true
+        sessionStartup?.cancel()
         // Stop transport
         await this.transport?.close()
 
