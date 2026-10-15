@@ -17,10 +17,10 @@ class FetchError extends Error {
     isTransient() { return [502, 503, 504].includes(this.status) }
 }
 
-function fixture({ enabled = true, running = 1, paired = "Paired", budget = 500 } = {}) {
+function fixture({ enabled = true, running = 1, paired = "Paired", budget = 500, errorClass = FetchError } = {}) {
     const startup = enabled ? new SessionStartup(Date.now() + budget, 1) : null
     const calls = { host: 0, attempts: 0, closed: 0, logs: [] as string[] }
-    const api = { sessionStartup: startup, FetchError, apiGetHost: async () => {
+    const api = { sessionStartup: startup, FetchError: errorClass, apiGetHost: async () => {
         calls.host++
         return { paired, current_game: running }
     } }
@@ -160,4 +160,24 @@ test("a stuck media capability probe cannot outlive the connection budget", asyn
     await f.stream.startConnection()
     assert(f.calls.logs.some(message => message.includes("30 seconds")))
     assert.equal(f.calls.host, 1)
+})
+
+test("the outer startup loop does not replay ambiguous stream-creation failures", async () => {
+    const exports: any = {}
+    runInNewContext(apiSource, { exports, require: (name: string) => {
+        if (name == "./config_") return { CONFIG: { resume_only: true } }
+        if (name == "./session_startup") return { SessionStartup, isTransientStartupStatus: (status: number) => [502, 503, 504].includes(status) }
+        return {}
+    }, location: { search: "", pathname: "/" }, window: { addEventListener() {} }, URLSearchParams, TypeError, DOMException })
+    for (const error of [
+        new exports.FetchError("unknown", "/host/stream/webrtc", "POST", new TypeError("response lost")),
+        new exports.FetchError("failed", "/host/stream/webrtc", "POST", new Response(null, { status: 502 })),
+    ]) {
+        const f = fixture({ errorClass: exports.FetchError })
+        f.stream.connectWithConfiguredTransport = async () => { f.calls.attempts++; throw error }
+        await f.stream.startConnection()
+        assert.equal(f.calls.attempts, 1)
+        assert.equal(f.calls.host, 1)
+    }
+    assert.equal(new exports.FetchError("failed", "/host", "GET", new Response(null, { status: 503 })).isTransient(), true)
 })

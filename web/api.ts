@@ -190,6 +190,7 @@ function buildRequest(api: Api, endpoint: string, method: string, init?: ApiFetc
 export class FetchError extends Error {
     private response?: Response
     private networkFailure?: boolean
+    private readOnly: boolean
 
     constructor(type: "timeout", endpoint: string, method: string)
     constructor(type: "failed", endpoint: string, method: string, response: Response, reason?: string)
@@ -203,15 +204,16 @@ export class FetchError extends Error {
             super(`failed to fetch ${method} at ${endpoint} with code ${response?.status} ${reason ? `because of ${reason}` : ""}`)
 
             this.response = response
-        } else if (type == "unknown") {
+        } else {
             const error = responseOrError as Error
             super(`failed to fetch ${method} at ${endpoint} because of ${error}`)
             this.networkFailure = error instanceof TypeError || (error instanceof DOMException && error.name == "TimeoutError")
         }
+        this.readOnly = method == GET || method == OPTIONS
     }
 
     isTransient(): boolean {
-        return this.networkFailure === true || (this.response != null && isTransientStartupStatus(this.response.status))
+        return this.readOnly && (this.networkFailure === true || (this.response != null && isTransientStartupStatus(this.response.status)))
     }
 
     getResponse(): Response | null {
