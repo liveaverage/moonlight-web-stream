@@ -192,6 +192,12 @@ export const frFr: Translations = {
             `Mode de support du codec serveur : ${host.server_codec_mode_support}`,
     },
     game: {
+        connecting: "Connexion…",
+        popupBlocked: "Autorisez les fenêtres contextuelles pour ouvrir le bureau.",
+        pairingRequired: "Associez cet hôte avant de vous connecter.",
+        otherSessionRunning: "Une autre application est en cours. Contactez un administrateur pour l’arrêter.",
+        connectionFailed: "Connexion au bureau impossible. Reconnectez-vous si nécessaire, puis réessayez.",
+
         resumeSession: "Reprise de la session",
         stopCurrentSession: "Arrêt de la session",
         failedToCloseApp: "Echec de la fermeture de l'app !",

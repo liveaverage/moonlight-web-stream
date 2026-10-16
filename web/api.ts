@@ -2,9 +2,16 @@ import { App, DeleteHostQuery, DeleteUserRequest, DetailedHost, DetailedUser, Ge
 import { showNotification } from "./component/notification"
 import { showMessage, showModal } from "./component/modal/index"
 import { ApiUserPasswordPrompt } from "./component/modal/login"
-import { buildUrl } from "./config_"
+import { CONFIG, buildUrl } from "./config_"
+import { SessionStartup, isTransientStartupStatus } from "./session_startup"
 import { WebRtcLinkHeader_Tags, webrtcLinkHeaderParse } from "./uniffi/moonlight_common_bindings"
 import { StreamedJsonResponse } from "./streamed_json_response"
+
+// Only connection startup shares the budget; normal browsing and administration do not retry writes.
+const requestedDeadline = Number(new URLSearchParams(location.search).get("connectBy"))
+export const sessionStartup = CONFIG.resume_only && location.pathname.endsWith("/stream.html")
+    ? new SessionStartup(requestedDeadline > 0 ? Math.min(requestedDeadline, Date.now() + 30000) : undefined)
+    : null
 
 // IMPORTANT: this should be a bit bigger than the moonlight-common reqwest backend timeout if some hosts are offline!
 const API_TIMEOUT = 12000
@@ -111,6 +118,7 @@ export async function apiPutClipboard(api: Api, hostId: number, text: string): P
 }
 
 export type ApiFetchInit = {
+    startup?: SessionStartup,
     noUrlModify?: boolean,
     query?: any,
     noTimeout?: boolean,
@@ -181,6 +189,8 @@ function buildRequest(api: Api, endpoint: string, method: string, init?: ApiFetc
 
 export class FetchError extends Error {
     private response?: Response
+    private networkFailure?: boolean
+    private readOnly: boolean
 
     constructor(type: "timeout", endpoint: string, method: string)
     constructor(type: "failed", endpoint: string, method: string, response: Response, reason?: string)
@@ -194,10 +204,16 @@ export class FetchError extends Error {
             super(`failed to fetch ${method} at ${endpoint} with code ${response?.status} ${reason ? `because of ${reason}` : ""}`)
 
             this.response = response
-        } else if (type == "unknown") {
+        } else {
             const error = responseOrError as Error
             super(`failed to fetch ${method} at ${endpoint} because of ${error}`)
+            this.networkFailure = error instanceof TypeError || (error instanceof DOMException && error.name == "TimeoutError")
         }
+        this.readOnly = method == GET || method == OPTIONS
+    }
+
+    isTransient(): boolean {
+        return this.readOnly && (this.networkFailure === true || (this.response != null && isTransientStartupStatus(this.response.status)))
     }
 
     getResponse(): Response | null {
@@ -212,13 +228,17 @@ export async function fetchApi<Initial, Other>(api: Api, endpoint: string, metho
 export async function fetchApi(api: Api, endpoint: string, method: string = GET, init?: { response?: "json" | "ignore" | "jsonStreaming" } & ApiFetchInit, timeout: number = API_TIMEOUT) {
     const [url, request] = buildRequest(api, endpoint, method, init)
 
-    if (!init?.noTimeout) {
+    // Resource cleanup must still run after the user cancels connection startup.
+    const startup = init?.keepalive ? null : (init?.startup ?? sessionStartup)
+    if (!init?.noTimeout && !startup?.active) {
         request.signal = AbortSignal.timeout(timeout)
     }
 
     let response
     try {
-        response = await fetch(url, request)
+        response = startup
+            ? await startup.fetch(url, request, method == GET || method == OPTIONS)
+            : await fetch(url, request)
     } catch (e: any) {
         throw new FetchError("unknown", endpoint, method, e)
     }
@@ -412,8 +432,8 @@ export async function apiGetDefaultRole(api: Api): Promise<GetDefaultRoleRespons
 export async function apiGetHosts(api: Api): Promise<StreamedJsonResponse<GetHostsResponse, UndetailedHost>> {
     return await fetchApi<GetHostsResponse, UndetailedHost>(api, "/hosts", GET, { response: "jsonStreaming" })
 }
-export async function apiGetHost(api: Api, query: GetHostQuery): Promise<DetailedHost> {
-    const response = await fetchApi(api, "/host", GET, { query })
+export async function apiGetHost(api: Api, query: GetHostQuery, startup?: SessionStartup): Promise<DetailedHost> {
+    const response = await fetchApi(api, "/host", GET, { query, startup })
 
     return (response as GetHostResponse).host
 }
@@ -482,9 +502,13 @@ export async function apiWebRTCConfiguration(api: Api): Promise<WebRTCConfigurat
 
     let response
     try {
-        response = await fetch(url, request)
+        response = sessionStartup ? await sessionStartup.fetch(url, request) : await fetch(url, request)
     } catch (e: any) {
         throw new FetchError("unknown", ENDPOINT, OPTIONS, e)
+    }
+
+    if (sessionStartup && !response.ok) {
+        throw new FetchError("failed", ENDPOINT, OPTIONS, response)
     }
 
     const iceServers: Array<RTCIceServer> = []
@@ -520,7 +544,7 @@ export async function apiWebRTCOffer(api: Api, offerSdp: string): Promise<WebRTC
 
     let response
     try {
-        response = await fetch(url, request)
+        response = sessionStartup ? await sessionStartup.fetch(url, request, false) : await fetch(url, request)
     } catch (e: any) {
         throw new FetchError("unknown", ENDPOINT, POST, e)
     }

@@ -1,17 +1,20 @@
 import { Component, ComponentEvent } from "../index"
-import { Api, apiGetAppImage, apiHostCancel } from "../../api"
+import { Api, apiGetAppImage, apiGetHost, apiHostCancel } from "../../api"
 import { App } from "../../api_bindings"
 import { getCurrentLanguage, getTranslations } from "../../i18n"
 import { setContextMenu } from "../context_menu"
 import { showMessage } from "../modal/index"
 import { APP_NO_IMAGE } from "../../resources/index"
-import { buildUrl } from "../../config_"
+import { CONFIG, buildUrl } from "../../config_"
+import { SessionStartup } from "../../session_startup"
+import { openDesktopWindow } from "../../desktop_window"
 
 export type GameCache = App & { activeApp: number | null }
 
 export type GameEventListener = (event: ComponentEvent<Game>) => void
 
 export class Game implements Component {
+    private static desktopWindows = new Map<string, Window>()
     private api: Api
 
     private hostId: number
@@ -94,6 +97,10 @@ export class Game implements Component {
 
     private async onClick(event: MouseEvent) {
         const i = getTranslations(getCurrentLanguage()).game
+        if (CONFIG.resume_only) {
+            this.startStream()
+            return
+        }
         if (this.cache.activeApp != null) {
             const elements = []
 
@@ -134,7 +141,60 @@ export class Game implements Component {
             this.divElement.dispatchEvent(event)
         }
     }
+    private async startDesktopStream() {
+        const i = getTranslations(getCurrentLanguage()).game
+        const key = `${CONFIG.path_prefix}:${this.hostId}`
+        const existing = Game.desktopWindows.get(key)
+        if (existing && !existing.closed) {
+            existing.focus()
+            return
+        }
+        const standalone = window.matchMedia('(display-mode: standalone)').matches
+        const target = standalone ? window : window.open("", `moonlight-${key}`)
+        if (!target) {
+            await showMessage(i.popupBlocked)
+            return
+        }
+        Game.desktopWindows.set(key, target)
+        const status = document.createElement("p")
+        status.textContent = i.connecting
+        status.setAttribute("role", "status")
+        this.divElement.appendChild(status)
+        const startup = new SessionStartup()
+        try {
+            if (!standalone) {
+                target.document.title = i.connecting
+                target.document.body.textContent = i.connecting
+            }
+            const checkHost = async () => {
+                const host = await apiGetHost(this.api, { host_id: this.hostId }, startup)
+                if (host.paired != "Paired") throw new Error(i.pairingRequired)
+                if (host.current_game != 0 && host.current_game != this.appId) throw new Error(i.otherSessionRunning)
+            }
+            await checkHost()
+            if (target.closed) return
+            const query = new URLSearchParams({ hostId: String(this.hostId), appId: String(this.appId), connectBy: String(startup.deadline) })
+            const address = buildUrl(`/stream.html?${query}`)
+            if (standalone) target.location.href = address
+            else await openDesktopWindow(target, address, startup, checkHost)
+        } catch (error) {
+            Game.desktopWindows.delete(key)
+            const message = error instanceof Error && [i.pairingRequired, i.otherSessionRunning].includes(error.message)
+                ? error.message : i.connectionFailed
+            if (!standalone && !target.closed) target.close()
+            await showMessage(message)
+        } finally {
+            startup.cancel()
+            status.remove()
+        }
+    }
+
     private startStream() {
+        if (CONFIG.resume_only) {
+            void this.startDesktopStream()
+            return
+        }
+
         let query = new URLSearchParams({
             hostId: this.getHostId(),
             appId: this.getAppId(),
@@ -163,8 +223,10 @@ export class Game implements Component {
             callback: async () => {
                 this.startStream()
 
-                const event = new ComponentEvent("ml-gamereload", this)
-                this.divElement.dispatchEvent(event)
+                if (!CONFIG.resume_only) {
+                    const event = new ComponentEvent("ml-gamereload", this)
+                    this.divElement.dispatchEvent(event)
+                }
             }
         })
 

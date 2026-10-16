@@ -62,6 +62,33 @@ You can install it [manually](#install-manually) or with [docker](docker/README.
 
 3. Launch an app
 
+### Desktop session controls
+
+For desktop-only installations, enable direct start/resume:
+
+```json
+{
+  "web_server": {
+    "resume_only": true
+  }
+}
+```
+
+This optional setting defaults to `false`. When enabled, clicking an application
+connects directly and hides Stop Current Session. Exit disconnects the browser
+stream; it does not cancel the Sunshine application. Another running application
+is never stopped automatically; administrators can still cancel it through their
+existing administrative tools or the host API.
+
+A Connecting state covers failed viewer-page loads, transient network errors,
+and HTTP 502/503/504 startup failures within a shared 30-second budget. The viewer
+finishes loading before it can start a stream; retrying its page does not replay
+a stream-creation request. Authentication, pairing and permanent errors
+remain actionable. Repeated clicks focus the existing connection window instead
+of creating duplicates. If the connection fails, close that window and try again.
+Established streams keep their existing transport and disconnect behavior; this
+setting does not automatically reconnect a dropped active stream.
+
 ### Clipboard
 
 The stream sidebar provides text paste into the remote desktop, copy out through an optional Windows/Linux host companion, and an opt-in Ctrl/Cmd+C/V redirect. Paste-in requires no Sunshine changes; copy-out works when Moonlight Web runs on a separate bastion because the companion connects outbound from the Sunshine host.
